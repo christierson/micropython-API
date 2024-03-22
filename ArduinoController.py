@@ -28,7 +28,6 @@ class Controller(Thread):
         delta = (datetime.now() - self.t0).total_seconds()
         sleep(max(0, self.T - delta))        
 
-
     def cycle(self):
         print("You forgot to override the cycle method")
         pass
@@ -45,11 +44,11 @@ class ArduinoController(Controller):
         for component in self.components:
             component.write()
 
-class Program(Thread):
-    def __init__(self, component: Component, rate) -> None:
+class Program(Controller):
+    def __init__(self, component: Component, freq) -> None:
         self.component = component
         self.schedule = []
-        return super().__init__(freq=)
+        return super().__init__(freq=freq)
     
     def run(self):
         pass
