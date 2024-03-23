@@ -1,10 +1,8 @@
-import pyfirmata
 from time import sleep
 from threading import Thread, Lock
 from datetime import datetime
+from boardconfig import BOARD, FREQ
 
-BOARD = pyfirmata.Arduino('/dev/ttyACM0')
-FREQ = 12
 T = 1/FREQ
 
 

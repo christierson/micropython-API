@@ -1,17 +1,19 @@
 from ArduinoController import *
-
-LAMP = 9
-FAN = 10
+import math
 
 def main():
-    lamp = Component(LAMP)
-    fan = Component(FAN)
+    values = [math.sin(x/100) for x in range(100)]
+    delays = [0.05]*100
+    print(values)
+    print(delays)
+    lamp = Lamp()
+    lamp.fade(1, 1)
+    lamp.fade(0, 1)
+    lamp.fade(1, 1)
+    lamp.fade(0, 1)
 
-    controller = ArduinoController()
-    controller.add_component(lamp)
-    controller.add_component(fan)
-
-    controller.start()
+def points(n):
+    return [x/n for x in range(n)]
 
 if __name__ == "__main__":
     main()

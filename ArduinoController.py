@@ -1,65 +1,68 @@
+from threading import Thread, Lock
+from queue import Queue
 from datetime import datetime
-from threading import Thread
 from time import sleep
+from boardconfig import BOARD
 
-class Component:
-    def __init__(self, pin):
-        self.value = 0
+LAMP = BOARD.get_pin('d:9:p')
+# FAN = BOARD.get_pin('d:10:p')
+
+class Component(Thread):
+    def __init__(self, pin, name = "Unknown component"):
+        Thread.__init__(self)
+        self.queue = Queue()
+        self.running = False
         self.pin = pin
-
-    def write(self):
-        self.pin.write(self.value)
-
-    def set(self, value):
-        self.value = value
-
-class Controller(Thread):
-    def __init__(self, freq) -> None:
-        self.T = 1/freq
-        self.t0 = datetime.now()
-        return super().__init__()
+        self.name = name
+        self.value = 0
+        print("Created component", name)
 
     def run(self):
-        self.sleep_T()
-        self.cycle()
-        self.t0 = datetime.now()
-
-    def sleep_T(self):
-        delta = (datetime.now() - self.t0).total_seconds()
-        sleep(max(0, self.T - delta))        
-
-    def cycle(self):
-        print("You forgot to override the cycle method")
-        pass
-
-class ArduinoController(Controller):
-    def __init__(self) -> None:
-        self.components = []
-        return super().__init__(freq=24)
-
-    def add_component(self, component: Component):
-        self.components.append(component)
-
-    def cycle(self):
-        for component in self.components:
-            component.write()
-
-class Program(Controller):
-    def __init__(self, component: Component, freq) -> None:
-        self.component = component
-        self.schedule = []
-        return super().__init__(freq=freq)
-    
-    def run(self):
-        pass
-
-    def cycle(self, index):
-        if index > len(self.schedule) - 1:
+        if self.queue.empty():
+            self.running = False
             return
-        self.component.set(self.schedule[index])
-        return self.cycle(index + 1)
+        delay, value = self.queue.get()
+        sleep(delay)
+        self.write(self.translate(self.minmax(value)))
+        self.run()
 
+    def minmax(self, value):
+        return max(0, min(1, value))
 
-class Schedule(Program):
-    pass
+    def translate(self, value):
+        return value
 
+    def write(self, value):
+        print("Writing", value, "to", self.name)
+        self.value = value
+        self.pin.write(1-value)
+
+    def schedule(self, delays, values):
+        lenght = len(delays)
+        if lenght != len(values) or lenght == 0:
+            print("Delay and value list mismatch")
+            return
+        self.running = True
+        for i, time in enumerate(delays):
+            value = values[i]
+            self.queue.put((time, value))
+        self.run()
+    
+    def __str__(self) -> str:
+        return self.name
+    
+class Lamp(Component):
+
+    def __init__(self):
+        self.freq = 32
+        return super().__init__(LAMP, name="Lamp")
+    
+    def fade(self, value, time):
+        n = time*self.freq
+        diff = value - self.value
+        step = diff/n
+        delays = [1/self.freq]*(n+1)
+        values = [self.value + step*x for x in range(n)] + [value]
+
+        self.schedule(delays, values)
+            
