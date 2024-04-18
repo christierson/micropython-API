@@ -7,10 +7,17 @@ def main():
     print(values)
     print(delays)
     lamp = Lamp()
-    lamp.fade(1, 1)
-    lamp.fade(0, 1)
-    lamp.fade(1, 1)
-    lamp.fade(0, 1)
+    lamp.set(1)
+    sleep(0.5)
+    lamp.set(0)
+    sleep(0.5)
+    lamp.set(1)
+    sleep(0.5)
+    lamp.set(0)
+    # lamp.fade(1, 1)
+    # lamp.fade(0, 1)
+    # lamp.fade(1, 1)
+    # lamp.fade(0, 1)
 
 def points(n):
     return [x/n for x in range(n)]
