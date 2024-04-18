@@ -1,0 +1,6 @@
+ampy -p /dev/ttyACM1 rm main.py
+ampy -p /dev/ttyACM1 rm src
+
+
+ampy -p /dev/ttyACM1 put main.py
+ampy -p /dev/ttyACM1 put src
