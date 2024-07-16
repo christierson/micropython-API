@@ -1,6 +1,9 @@
-ampy -p /dev/ttyACM1 rm main.py
-ampy -p /dev/ttyACM1 rm src
+ampy -p /dev/ttyACM0 rm main.py
+ampy -p /dev/ttyACM0 rm component.py
+ampy -p /dev/ttyACM0 rm api.py
+ampy -p /dev/ttyACM0 rm src
 
 
-ampy -p /dev/ttyACM1 put main.py
-ampy -p /dev/ttyACM1 put src
+ampy -p /dev/ttyACM0 put main.py
+ampy -p /dev/ttyACM0 put component.py
+ampy -p /dev/ttyACM0 put api.py

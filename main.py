@@ -1,71 +1,58 @@
-# from src.interface import run
+from api import API
+from board import Board
+COMMANDS = {
+    "help": help,
+    # "board": board,
+    # "read": read,
+    # "write": write,
+    # "pin": pin
+}
 
-# run()
+
+def help():
+    return {"Commands": {
+        "help": {
+            "returns": "This message"
+        },
+        "board": {
+            "returns": "The current state of the board config"
+        },
+        "read": {
+            "returns": "The value of a pin",
+            "required arguments": {
+                "pin": "The pin number for the pin you want to read"
+            }
+        },
+        "write": {
+            "action": "Sets the value of a pin",
+            "returns": "The value of a pin",
+            "required arguments": {
+                "pin": "The pin number for the pin you want to write to",
+                "value": "The value you want to write"
+            }
+        },
+        "pin": {
+            "action": "Sets the name and type for a pin",
+            "returns": "The resulting state of the board",
+            "required arguments": {
+                "pin": "The number of the pin",
+                "name": "Pin name for later reference",
+                "mode": "Desired component type: {\"INP\": 1, \"OUT\": 2, \"DHT\": 3, \"PWM\": 4}"
+            }
+        }
+    }
+    }
 
 
-import network
-import socket
-import ujson
-from src.init_dht import sensor_read
+def board_controller(board):
+    def controller(data):
+        print(data)
+        command = data["command"]
+        return data
 
-HTTP_200 = b'HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n'
-# Set up Wi-Fi connection
-wifi_ssid = "dinmamma"
-wifi_password = "chromecast"
+    return controller
 
-# Configure Wi-Fi
-wifi = network.WLAN(network.STA_IF)
-wifi.active(True)
-wifi.connect(wifi_ssid, wifi_password)
 
-# Wait until connected to Wi-Fi
-while not wifi.isconnected():
-    pass
-
-# Print the IP address once connected
-print("Connected to Wi-Fi")
-print("IP Address:", wifi.ifconfig()[0])
-
-# Set up socket
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(('0.0.0.0', 8080))
-server_socket.listen(1)
-
-print("Waiting for connection...")
-
-# Accept incoming connection
-client_socket, client_address = server_socket.accept()
-print("Connected to:", client_address)
-
-while True:
-    try:
-        # Receive data from the client
-        data = client_socket.recv(1024)
-        
-        # Check if data is received
-        if data:
-            # Decode received data as JSON
-            try:
-                control_data = ujson.loads(data)
-                print("Received:", control_data)
-                
-                temp, hum = sensor_read()
-                
-                # Send response back to client
-                response_data = {
-                    "temperature": temp,
-                    "humidity": hum,
-                }
-                print("Sensor Reading:",  response_data)
-                response_json = ujson.dumps(response_data)
-                client_socket.send(response_json.encode())
-                
-            except Exception as e:
-                print("Error:", e)
-        
-    except KeyboardInterrupt:
-        break
-
-# Close sockets
-client_socket.close()
-server_socket.close()
+board = Board()
+api = API(controller)
+# api.run()
