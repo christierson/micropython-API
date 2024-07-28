@@ -52,17 +52,18 @@ class API:
     def run(self):
         try:
             while True:
-                request = self.recv()
                 try:
+                    request = self.recv()
                     data = self.handle_request(request)
+                except Exception as e:
+                    self.error_response(f"Error recieving request: {e}")
+                try:
                     response_data = self.func(data)
                     self.response(response_data)
                 except Exception as e:
-                    self.error_response(e)
-                    print(e)
+                    self.error_response(f"Error processing request: {e}")
         except Exception as e:
             print(e)
-        finally:
             self.server.close()
 
     def handle_request(self, request):

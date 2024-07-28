@@ -3,50 +3,64 @@ from machine import Pin, PWM
 from dht import DHT22
 
 
+class Types:
+    NONE = None
+    INP = "inp"
+    OUT = "out"
+    PWM = "pwm"
+    DHT = "dht"
+
+
 class Component:
-    def __init__(self, pin_number, name) -> None:
+    def __init__(self, pin_number, name="Empty") -> None:
         self.pin_number = pin_number
+        self.available = True
+        self.type = Types.NONE
         self.name = name
         self.pin = Pin(pin_number)
         self.value = 0
         self.init_pin()
 
     def init_pin(self):
-        self.abstract_warning()
+        print(f"Initialized pin {self.pin_number}")
 
     def read(self):
-        self.abstract_warning()
+        return "This pin cannot be read"
 
     def write(self, value):
-        self.abstract_warning()
+        return "This pin cannot be written to"
 
-    def abstract_warning(self):
-        print("ABSTRACT CLASS INSTANCIATED")
-        print("class Component should not be used directly")
-        print("ABSTRACT CLASS INSTANCIATED")
+    def serialize(self):
+        return {
+            "pin": self.pin_number,
+            "type": self.type,
+            "name": self.name,
+            "value": self.value,
+        }
 
     def __str__(self) -> str:
-        return "Pin " + self.pin_number + ": " + self.name
+        return f"{self.pin_number}: {self.name} ({self.type})"
 
 
 class DHTComponent(Component):
+
     def init_pin(self) -> None:
         self.pin = DHT22(Pin(self.pin))
+        self.type = Types.DHT
+        self.available = False
         print(f"Created DHT component on pin {self.pin_number}")
 
     def read(self):
         self.value = self.pin.measure()
         print(f"Reading {self.value} from pin {self.pin_number}")
-
         return self.value
-
-    def write(self, value):
-        print("Cannot write to DHT pin")
 
 
 class PWMComponent(Component):
 
     def init_pin(self) -> None:
+        self.available = False
+        self.type = Types.PWM
         self.freq = 5000
         self.value = 0
         self.pin = PWM(Pin(self.pin))
@@ -59,6 +73,7 @@ class PWMComponent(Component):
         self.value = value
         self.pin.duty_u16(value)
         print(f"Wrote {value} to pin {self.pin_number}")
+        return f"Wrote {value} to pin {self.pin_number}"
 
     def read(self):
         print(f"Reading {self.value} from pin {self.pin_number}")
@@ -67,6 +82,8 @@ class PWMComponent(Component):
 
 class GPIComponent(Component):
     def init_pin(self) -> None:
+        self.available = False
+        self.type = Types.INP
         self.pin = Pin(self.pin, Pin.IN)
         print(
             f"Created input component on pin {self.pin_number} (value: 0 or 1)")
@@ -74,20 +91,29 @@ class GPIComponent(Component):
     def read(self):
         return self.pin.value()
 
-    def write(self, value):
-        print("Cannot write to input pin")
-
 
 class GPOComponent(Component):
     def init_pin(self) -> None:
-        self.pin = Pin(pin, Pin.OUT)
+        self.available = False
+        self.type = Types.OUT
+        self.pin = Pin(self.pin, Pin.OUT)
         print(f"Created output component on pin {self.pin_number}")
 
     def write(self, value):
         self.value = value
         self.pin.value(value)
         print(f"Wrote {value} to pin {self.pin_number}")
+        return f"Wrote {value} to pin {self.pin_number}"
 
     def read(self):
         print(f"Reading {self.value} from pin {self.pin_number}")
         return self.value
+
+
+COMPONENTS = {
+    Types.NONE: Component,
+    Types.PWM: PWMComponent,
+    Types.DHT: DHTComponent,
+    Types.OUT: GPOComponent,
+    Types.INP: GPIComponent,
+}

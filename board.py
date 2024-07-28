@@ -1,76 +1,107 @@
-from component import PWMComponent, DHTComponent, GPOComponent, GPIComponent
-
-NON_GP = [3, 8, 13, 18, 23, 28, 33, 35, 36, 37, 38, 39, 40]
+from component import Component, COMPONENTS
+import json
+NON_GP = [3, 8, 13, 18, 23, 28, 30, 33, 35, 36, 37, 38, 39, 40]
 
 
 class Board:
     def __init__(self) -> None:
-        self.board = self.default_board()
-        self.commands = {
-            "help": self.help,
-            "board": self.board,
-            "read": self.read,
-            "write": self.write,
-            "pin": self.pin,
-        }
+        self.board = {}
+        self.load_default()
         print("Created board")
         self.print_board()
 
     def available_pins(self):
-        return [key for key, value in self.board.items() if value == None]
+        return [key for key, value in self.board.items() if value.available]
 
-    def default_board(self):
-        return {f"{id}": None for id in range(1, 41) if id not in NON_GP}
+    def load_default(self):
+        try:
+            with open("boardconfig.json", "r") as fp:
+                default = json.loads(fp.read())
+        except:
+            print("CREATING NEW DEFAULT FILE")
+            self.board = {f"{id}": Component(
+                id) for id in range(1, 31) if id not in NON_GP}
+            self.save_default()
+            return
 
-    def create(self, name, type, pin):
-        if self.board[str(pin)] != None:
-            return f"Pin busy - try one of the available ones: {self.available_pins()}"
+        for c in default.values():
+            C = COMPONENTS[c["type"]]
+            instance = C(c["pin"], c["name"])
+            self.board[c["pin"]] = instance
 
-        if type in ["INP", 1, "1"]:
-            component = GPIComponent(pin, name)
-        elif type in ["OUT", 2, "2"]:
-            component = GPOComponent(pin, name)
-        elif type in ["DHT", 3, "3"]:
-            component = DHTComponent(pin, name)
-        elif type in ["PWM", 4, "4"]:
-            component = PWMComponent(pin, name)
+    def save_default(self):
+        with open("boardconfig.json", "w") as fp:
+            fp.write(json.dumps(self.serialize()))
+        return "Saved current board"
 
-        self.board[str(pin)] = component
+    def get_board(self):
+        return self.serialize()
+
+    def serialize(self):
+        d = {n: pin.serialize() for n, pin in self.board.items()}
+        print("Serialized:", d)
+        return d
 
     def print_board(self):
+        def get_str(p):
+            if p in self.board:
+                return str(self.board[p])
+            return f"{p}: Unavailable"
+
         for i in range(20):
-            print(self.board[f"{i+1}"], "\t\t", self.board[f"{40-i}"])
+            pa = i+1
+            pb = 40-i
+            print(f"{get_str(pa) : <20}{get_str(pb) : <20}")
 
     def recieve(self, data):
         print(data)
-        if "command" not in data:
-            return f"No command supplied. Format: {'{'}\"command\": \"[{self.commands.keys()}]\", \"args\": {'{}'}{'}'}"
-        command = data["command"]
-        arguments = data.get("args")
-        if command not in self.commands:
-            return f"Unrecognized command. Available commands: {self.commands.keys}"
+        command = data.get('command')
+        if not command:
+            raise ValueError("No command provided in the data")
+        command_method = getattr(self, command, None)
+        if not command_method:
+            raise ValueError(f"Command '{command}' not found")
+        args = data.get('args', [])
+        kwargs = data.get('kwargs', {})
+        return command_method(*args, **kwargs)
 
-        return self.commands[command]()
-        print(f"Doing {data['command']}!")
+    def read(self, pin):
+        pin = self.board.get(pin)
+        if not pin:
+            return f"Invalid pin - valid pins: {list(self.board.keys())}"
+        return pin.read()
 
-    def board(self, arguments):
-        return "Ran board!"
+    def write(self, pin, value):
+        pin = self.board.get(pin)
+        if not pin:
+            return f"Invalid pin - valid pins: {list(self.board.keys())}"
+        return pin.write(value)
 
-    def read(self, arguments):
-        return "Ran read!"
+    def set_pin(self, pin, name, mode):
+        if pin not in self.board:
+            return f"Invalid pin - valid pins: {list(self.board.keys())}"
+        if not self.board[pin].available:
+            return f"Pin busy - try one of the available ones: {self.available_pins()}"
+        mode = COMPONENTS.get(mode)
+        if not mode:
+            return f"Unknown mode - valid modes: {list(COMPONENTS.keys())}"
+        component = mode(pin, name)
 
-    def write(self, arguments):
-        return "Ran write!"
+        self.board[pin] = component
+        return f"Created {str(component)}"
 
-    def pin(self, arguments):
-        return "Ran pin!"
-
-    def help(self, arguments):
+    def help(self):
         return {"Commands": {
+            "load_default": {
+                "action": "Loads board config from file, creates one if needed"
+            },
+            "save_default": {
+                "action": "Saves the current board setup into config file"
+            },
             "help": {
                 "returns": "This message"
             },
-            "board": {
+            "get_board": {
                 "returns": "The current state of the board config"
             },
             "read": {
