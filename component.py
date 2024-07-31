@@ -84,7 +84,7 @@ class GPIComponent(Component):
     def init_pin(self) -> None:
         self.available = False
         self.type = Types.INP
-        self.pin = Pin(self.pin, Pin.IN)
+        self.pin = Pin(self.pin_number, Pin.IN)
         print(
             f"Created input component on pin {self.pin_number} (value: 0 or 1)")
 
@@ -96,7 +96,7 @@ class GPOComponent(Component):
     def init_pin(self) -> None:
         self.available = False
         self.type = Types.OUT
-        self.pin = Pin(self.pin, Pin.OUT)
+        self.pin = Pin(self.pin_number, Pin.OUT)
         print(f"Created output component on pin {self.pin_number}")
 
     def write(self, value):

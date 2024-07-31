@@ -1,38 +1,74 @@
 from component import Component, COMPONENTS
+from machine import Pin
+from utime import sleep
 import json
-NON_GP = [3, 8, 13, 18, 23, 28, 30, 33, 35, 36, 37, 38, 39, 40]
+# NON_GP = [3, 8, 13, 18, 23, 28, 30, 33, 35, 36, 37, 38, 39, 40]
+IDK1 = 23
+IDK2 = 24
+IDK3 = 25
+LED = 0
+NON_GPIO = [IDK1, IDK2, IDK3, LED]
+GPIO = [pin for pin in range(29) if pin not in NON_GPIO]
 
 
 class Board:
     def __init__(self) -> None:
-        self.board = {}
         self.load_default()
+        self.led = Pin(LED, Pin.OUT)
         print("Created board")
-        self.print_board()
+        for component in self.board.values():
+            print(str(component))
+        self.blink()
 
     def available_pins(self):
         return [key for key, value in self.board.items() if value.available]
+    
+    def blink(self):
+        self.led.value(1)
+        sleep(0.2)
+        self.led.value(0)
 
-    def load_default(self):
+    
+    def get_default(self):
         try:
             with open("boardconfig.json", "r") as fp:
                 default = json.loads(fp.read())
-        except:
-            print("CREATING NEW DEFAULT FILE")
-            self.board = {f"{id}": Component(
-                id) for id in range(1, 31) if id not in NON_GP}
-            self.save_default()
-            return
-
+                for pin, component in default.items():
+                    if pin not in GPIO:
+                        raise Exception("Invalid pin in config file.")
+                    elif not isinstance(component.get('value'), int):
+                        raise Exception(f"Invalid value for pin {pin} in config file.")
+                    elif component.get('type') not in COMPONENTS.keys():
+                        raise Exception(f"Invalid type for pin {pin} in config file.")
+                    elif component.get('pin') not in GPIO:
+                        raise Exception(f"Invalid pin for {pin} in config file.")
+                    elif not isinstance(component.get('name'), str):
+                        raise Exception(f"Invalid name for pin {pin} in config file.")
+        except Exception as e:
+            print("CREATING NEW DEFAULT FILE -", e)
+            default = {pin: {
+                "pin": pin,
+                "type": None,
+                "name": "Empty",
+                "value": 0,
+                } for pin in GPIO}
+            with open("boardconfig.json", "w") as fp:
+                fp.write(json.dumps(default))
+        return default
+    
+    def load_default(self):
+        self.board = {}
+        default = self.get_default()
         for c in default.values():
             C = COMPONENTS[c["type"]]
             instance = C(c["pin"], c["name"])
             self.board[c["pin"]] = instance
+        return "Loaded default board"
 
     def save_default(self):
         with open("boardconfig.json", "w") as fp:
             fp.write(json.dumps(self.serialize()))
-        return "Saved current board"
+        return "Saved current board as default"
 
     def get_board(self):
         return self.serialize()
@@ -42,19 +78,9 @@ class Board:
         print("Serialized:", d)
         return d
 
-    def print_board(self):
-        def get_str(p):
-            if p in self.board:
-                return str(self.board[p])
-            return f"{p}: Unavailable"
-
-        for i in range(20):
-            pa = i+1
-            pb = 40-i
-            print(f"{get_str(pa) : <20}{get_str(pb) : <20}")
-
     def recieve(self, data):
         print(data)
+        self.blink()
         command = data.get('command')
         if not command:
             raise ValueError("No command provided in the data")
@@ -63,6 +89,7 @@ class Board:
             raise ValueError(f"Command '{command}' not found")
         args = data.get('args', [])
         kwargs = data.get('kwargs', {})
+        self.blink()
         return command_method(*args, **kwargs)
 
     def read(self, pin):

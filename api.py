@@ -9,6 +9,7 @@ PASSWORD = "chromecast"
 
 class API:
     def __init__(self, func):
+        self.connect_wifi()
         self.host = "0.0.0.0"
         self.func = func
         self.port = 8080

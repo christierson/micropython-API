@@ -39,6 +39,9 @@ def save_default():
 def load_default():
     return send_data({"command": "load_default"})
 
+def blink():
+    return send_data({"command": "blink"})
+
 
 def set_pin(pin, name, mode):
     return send_data({"command": "set_pin", "kwargs": {
